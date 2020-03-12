@@ -1,4 +1,5 @@
 <?php
+
 // Write to log.
 debug_log('RAID_FROM_WEBHOOK()');
 
@@ -54,9 +55,9 @@ foreach ($update as $raid) {
 
     // Create gym if not exists
     $gym_name = $raid['message']['name'];
-    if (WEBHOOK_EXCLUDE_UNKOWN == true && $gym_name === "unkown") {
+    if (WEBHOOK_EXCLUDE_UNKOWN == true && $gym_name === "unknown") {
         
-        contiue;
+        continue;
     }
     $gym_lat = $raid['message']['latitude'];
     $gym_lon = $raid['message']['longitude'];
@@ -331,30 +332,32 @@ foreach ($update as $raid) {
         $const_chats = constant($const);
 
         // Get geofence chats and geofences
-        $raw = file_get_contents(CONFIG_PATH . '/geoconfig.json');
-        $geofences = json_decode($raw, true);
-        foreach ($geofences as $geofence) {
-            
-            $const_geofence = 'WEBHOOK_CHATS_LEVEL_' . $i . '_' . $geofence['id'];
-            $const_geofence_chats = constant($const_geofence);
+        if(is_file(CONFIG_PATH . '/geoconfig.json')) {
+            $raw = file_get_contents(CONFIG_PATH . '/geoconfig.json');
+            $geofences = json_decode($raw, true);
+            foreach ($geofences as $geofence) {
 
-            // Debug
-            //debug_log($const_geofence,'CONSTANT NAME:');
-            //debug_log($const_geofence_chats),'CONSTANT VALUE:');
-            
-            // if current raid inside path, add chats
-            $point = $created_raid['lat'] . " " . $created_raid['lon'];
-            $polygon = array();
-            foreach ($geofence['path'] as $geopoint) {
+                $const_geofence = 'WEBHOOK_CHATS_LEVEL_' . $i . '_' . $geofence['id'];
+                $const_geofence_chats = constant($const_geofence);
 
-                array_push($polygon, "$geopoint[0] $geopoint[1]");
-            }
-            
-            if (isPointInsidePolygon($point, $polygon)) {
+                // Debug
+                //debug_log($const_geofence,'CONSTANT NAME:');
+                //debug_log($const_geofence_chats),'CONSTANT VALUE:');
 
-                if($level == $i && defined($const_geofence) && !empty($const_geofence) && !empty($const_geofence_chats)) {
+                // if current raid inside path, add chats
+                $point = $created_raid['lat'] . " " . $created_raid['lon'];
+                $polygon = array();
+                foreach ($geofence['path'] as $geopoint) {
 
-                    $chats = explode(',', $const_geofence_chats);
+                    array_push($polygon, "$geopoint[0] $geopoint[1]");
+                }
+
+                if (isPointInsidePolygon($point, $polygon)) {
+
+                    if($level == $i && defined($const_geofence) && !empty($const_geofence) && !empty($const_geofence_chats)) {
+
+                        $chats = explode(',', $const_geofence_chats);
+                    }
                 }
             }
         }

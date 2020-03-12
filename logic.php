@@ -256,6 +256,7 @@ function get_raid_with_pokemon($raid_id)
                    gyms.lat, gyms.lon, gyms.address, gyms.gym_name, gyms.ex_gym, gyms.gym_note, gyms.gym_id, gyms.img_url,
                    pokemon.pokedex_id, pokemon.pokemon_name, pokemon.pokemon_form, pokemon.raid_level, pokemon.min_cp, pokemon.max_cp, pokemon.min_weather_cp, pokemon.max_weather_cp, pokemon.weather, pokemon.shiny,
                    users.name,
+                   gym_images.id as gym_img_id,
                    TIME_FORMAT(TIMEDIFF(end_time, UTC_TIMESTAMP()) + INTERVAL 1 MINUTE, '%k:%i') AS t_left,
                    TIMESTAMPDIFF(MINUTE,raids.start_time,raids.end_time) as t_duration
         FROM       raids
@@ -265,6 +266,8 @@ function get_raid_with_pokemon($raid_id)
         ON         raids.pokemon = CONCAT(pokemon.pokedex_id, '-', pokemon.pokemon_form)
         LEFT JOIN  users
         ON         raids.user_id = users.user_id
+        LEFT JOIN  gym_images
+        ON         gyms.img_url = gym_images.img_url
         WHERE      raids.id = {$raid_id}
         "
     );
@@ -3364,9 +3367,14 @@ function show_raid_poll($raid)
     $cnt = [];
     $cnt_all = 0;
     $cnt_latewait = 0;
-
+	$cnt_by_att_time = [];
+	
     while ($cnt_row = $rs_cnt->fetch_assoc()) {
         $cnt[$cnt_row['ts_att']] = $cnt_row;
+		$cnt_by_att_time[$cnt_row['ts_att']] += $cnt_row['count'];
+		$cnt_any_pokemon[$cnt_row['ts_att']] += $cnt_row['count_any_pokemon'];
+		$cnt_raid_pokemon[$cnt_row['ts_att']] += $cnt_row['count_raid_pokemon'];
+		$cnt_other_pokemon[$cnt_row['ts_att']] += $cnt_row['count_other_pokemon'];
         $cnt_all = $cnt_all + $cnt_row['count'];
         $cnt_latewait = $cnt_latewait + $cnt_row['count_late'];
     }
@@ -3513,7 +3521,7 @@ function show_raid_poll($raid)
                     $msg = raid_poll_message($msg, CR . '<b>' . (($current_att_time == 0) ? (getPublicTranslation('anytime')) : ($dt_att_time)) . '</b>');
 
                     // Hide if other pokemon got selected. Show attendances for each pokemon instead of each attend time.
-                    $msg = raid_poll_message($msg, (($cnt[$current_att_time]['count_other_pokemon'] == 0) ? (' [' . ($cnt[$current_att_time]['count'] + $count_att_time_extrapeople) . ']') : ''));
+                    $msg = raid_poll_message($msg, (($cnt[$current_att_time]['count_other_pokemon'] == 0) ? (' [' . ($cnt[$current_att_time]['count']) . ']') : ''));
 
                     // Add attendance counts by team - hide if other pokemon got selected.
                     if ($cnt[$current_att_time]['count'] > 0 && $cnt[$current_att_time]['count_other_pokemon'] == 0) {
@@ -3521,6 +3529,7 @@ function show_raid_poll($raid)
                         $count_mystic = $cnt[$current_att_time]['count_mystic'] + $cnt[$current_att_time]['extra_mystic'];
                         $count_valor = $cnt[$current_att_time]['count_valor'] + $cnt[$current_att_time]['extra_valor'];
                         $count_instinct = $cnt[$current_att_time]['count_instinct'] + $cnt[$current_att_time]['extra_instinct'];
+						$count_no_team = $cnt[$current_att_time]['count_no_team'] + $cnt[0]['count_no_team'];
                         $count_late = $cnt[$current_att_time]['count_late'];
 
                         // Add to message.
@@ -3528,7 +3537,7 @@ function show_raid_poll($raid)
                         $msg = raid_poll_message($msg, (($count_mystic > 0) ? TEAM_B . $count_mystic . '  ' : ''));
                         $msg = raid_poll_message($msg, (($count_valor > 0) ? TEAM_R . $count_valor . '  ' : ''));
                         $msg = raid_poll_message($msg, (($count_instinct > 0) ? TEAM_Y . $count_instinct . '  ' : ''));
-                        $msg = raid_poll_message($msg, (($cnt[$current_att_time]['count_no_team'] > 0) ? TEAM_UNKNOWN . $cnt[$current_att_time]['count_no_team'] . '  ' : ''));
+                        $msg = raid_poll_message($msg, (($count_no_team > 0) ? TEAM_UNKNOWN . $count_no_team . '  ' : ''));
                         $msg = raid_poll_message($msg, (($count_late > 0) ? EMOJI_LATE . $count_late . '  ' : ''));
                     }
                     $msg = raid_poll_message($msg, CR);
@@ -3537,9 +3546,9 @@ function show_raid_poll($raid)
                 // Add section/header for pokemon
                 if($previous_pokemon != $current_pokemon || $previous_att_time != $current_att_time) {
                     // Get counts for pokemons
-                    $count_all = $cnt[$current_att_time]['count'];
-                    $count_any_pokemon = $cnt[$current_att_time]['count_any_pokemon'];
-                    $count_raid_pokemon = $cnt[$current_att_time]['count_raid_pokemon'];
+                    $count_all = $cnt_by_att_time[$current_att_time];
+                    $count_any_pokemon = $cnt_any_pokemon[$current_att_time];
+                    $count_raid_pokemon = $cnt_raid_pokemon[$current_att_time];
 
                     // Show attendances when multiple pokemon are selected, unless all attending users voted for the raid boss + any pokemon
                     if($count_all != ($count_any_pokemon + $count_raid_pokemon)) {
@@ -3751,7 +3760,7 @@ function show_raid_poll_small($raid, $override_language = false)
     // Count attendances
     $rs = my_query(
         "
-        SELECT          count(attend_time)          AS count,
+        SELECT          count(a.attend_time)          AS count,
                         sum(team = 'mystic')        AS count_mystic,
                         sum(team = 'valor')         AS count_valor,
                         sum(team = 'instinct')      AS count_instinct,
@@ -3759,9 +3768,9 @@ function show_raid_poll_small($raid, $override_language = false)
                         sum(extra_mystic)           AS extra_mystic,
                         sum(extra_valor)            AS extra_valor,
                         sum(extra_instinct)         AS extra_instinct
-        FROM            attendance
+        FROM            (SELECT distinct user_id,extra_mystic,extra_valor,extra_instinct,raid_id,attend_time,raid_done,cancel FROM attendance WHERE raid_id = {$raid['id']}) a
         LEFT JOIN       users
-          ON            attendance.user_id = users.user_id
+          ON            a.user_id = users.user_id
           WHERE         raid_id = {$raid['id']}
             AND         attend_time IS NOT NULL
             AND         raid_done != 1
@@ -3970,9 +3979,9 @@ function curl_json_response($json_response, $json)
             } else if (!empty($response['result']['text'])) {
                 debug_log('Text message likely contains cleanup info!');
                 if(isset($response['result']['venue']['address']) && strpos($response['result']['venue']['address'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['text'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = '), 7);
+                    $cleanup_id = substr($response['result']['text'],strrpos($response['result']['text'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') + 7);
                 } else if(strpos($response['result']['text'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['text'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = '), 7);
+                    $cleanup_id = substr($response['result']['text'],strrpos($response['result']['text'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') + 7);
                 }else {
                     debug_log('BOT_ID ' . BOT_ID . ' not found in text message!');
                 }
@@ -3980,7 +3989,7 @@ function curl_json_response($json_response, $json)
             } else if (!empty($response['result']['caption'])) {
                 debug_log('Caption in a message likely contains cleanup info!');
                 if(strpos($response['result']['caption'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['caption'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = '), 7);
+                    $cleanup_id = substr($response['result']['caption'],strrpos($response['result']['caption'], substr(strtoupper(BOT_ID), 0, 1) . '-ID = ') + 7);
                 } else {
                     debug_log('BOT_ID ' . BOT_ID . ' not found in caption of message!');
                 }
@@ -4192,4 +4201,68 @@ function sendalarm($text, $raid, $user)
         }
     }
 
+}
+
+/**
+ * Check if the user is new to the channel
+ * @param $user_id
+ * @return bool
+ */
+function newuser($user_id) {
+	debug_log("Checking for new users: ".$user_id);
+	$query = my_query("SELECT tutorial FROM users WHERE user_id = '{$user_id}'");
+	$res = $query->fetch_assoc();
+	debug_log("Result: ".$res['tutorial']);
+	$return = (($res['tutorial']==0)?true:false);
+	return $return;
+}
+
+/**
+ * Return path/url to gym image
+ * @param $img_url
+ * @return string
+ */
+
+function get_gym_image($img_url) {
+    global $dbh;
+    $config=true;
+    debug_log('Get gym image: '.$img_url);
+    // Are we using local versions of image file
+    if($config==true) {
+        try
+        {
+            $query = '
+                SELECT * FROM gym_images
+                WHERE img_url = :img_url
+                LIMIT 1
+            ';
+            $statement = $dbh->prepare( $query );
+            $statement->bindValue(':img_url', $img_url, PDO::PARAM_STR);
+            $statement->execute();
+        } catch (PDOException $exception) {
+            error_log($exception->getMessage());
+            $dbh = null;
+            exit;
+        }
+        $file_found = false;
+        if($statement->rowCount() == 1) {
+            $photo_info = $statement->fetch;
+            $file_found = is_file(IMAGES_PATH.'/gyms/'.$photo_info['id'].'.jpg');
+            $photo_id = $photo_info['id'];
+        }
+        if(!$file_found) {
+            $q = '
+                INSERT INTO gym_images SET img_url = :img_url
+            ';
+            $ins = $dbh->prepare( $q );
+            $ins->bindValue(':img_url', $img_url, PDO::PARAM_STR);
+            $ins->execute();
+            $photo_id = $dbh->lastInsertId();
+            $file = file_put_contents(IMAGES_PATH.'/gyms/'.$photo_id.'.jpg',fopen($img_url,'r'));
+        }
+        return IMAGES_PATH.'/gyms/'.$photo_id.'.jpg';
+    }else {
+        $return_path = $img_url;
+    }
+    return $return_path;
 }

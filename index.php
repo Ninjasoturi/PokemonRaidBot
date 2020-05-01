@@ -71,7 +71,7 @@ if (isset($update['callback_query'])) {
 } else if ((isset($update['channel_post']) && $update['channel_post']['chat']['type'] == "channel") || (isset($update['message']) && $update['message']['chat']['type'] == "supergroup")) {
     // Collect cleanup information
     include_once(CORE_BOT_PATH . '/cleanup_collect.php');
-
+    chat_log($update);
 // Message is required to check for commands.
 } else if (isset($update['message']) && ($update['message']['chat']['type'] == 'private' || $update['message']['chat']['type'] == 'channel')) {
     // Portal message?

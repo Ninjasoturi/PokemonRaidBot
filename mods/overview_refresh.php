@@ -100,6 +100,42 @@ if ($count_active_raids > 0) {
     }
 }
 
+// Refresh polls also
+$query_messages = my_query("SELECT * FROM cleanup WHERE chat_id != 0 AND message_id != 0");
+debug_log("REFRESH POLLS:");
+debug_log("Num rows: ".$query_messages->num_rows);
+while($res_messages = $query_messages->fetch_assoc()) {
+	debug_log("message id: ".$res_messages['message_id']);
+	debug_log("chat id: ".$res_messages['chat_id']);
+	debug_log("raid id: ".$res_messages['raid_id']);
+	
+
+	$data_poll['callback_query']['message']['message_id']=$res_messages['message_id'];
+	$data_poll['callback_query']['message']['chat']['id']=$res_messages['chat_id'];
+	debug_log("callback_query: ".json_encode($data_poll));
+
+	// Get the raid data by id.
+	$raid = get_raid($res_messages['raid_id']);
+
+	$msg = show_raid_poll($raid);
+	$keys = keys_vote($raid);
+	if($raid['event']!=0) {
+		edit_message($data_poll, $msg['full'], $keys, ['disable_web_page_preview' => 'true']);
+	}else {
+        // If raid is over, update photo
+		if($raid['ts_end'] < $raid['ts_now'] ){
+			// Edit the photo
+			$url = PICTURE_URL . "?gym=".$raid['gym_id']."&pokemon=ended";
+			editMessageMedia($res_messages['message_id'], $msg['short'], $keys, $res_messages['chat_id'],['disable_web_page_preview' => 'true'], false, $url);	
+        }else {
+			edit_caption($data_poll, $msg['short'], $keys, ['disable_web_page_preview' => 'true']);
+		}
+	}
+}
+foreach($config->CHAT_CLEANUP_ID as $cleanup_chat_id) {
+    chat_cleanup($cleanup_chat_id);
+}
+
 // Write to log.
 debug_log('Active chats:');
 debug_log($chats_active);

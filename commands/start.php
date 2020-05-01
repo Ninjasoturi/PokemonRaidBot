@@ -6,8 +6,8 @@ debug_log('START()');
 //debug_log($update);
 //debug_log($data);
 
-$new_user = newuser($update['message']['from']['id']);
-if($new_user) {
+$new_user = new_user($update['message']['from']['id']);
+if($config->TUTORIAL_MODE && $new_user) {
 	$msg = $tutorial[0]['msg_new'];
 	$keys = [
 	[
@@ -101,7 +101,7 @@ if($new_user) {
         // Set message.
         $msg = '<b>' . getTranslation('select_gym_first_letter') . '</b>' . ($config->RAID_VIA_LOCATION ? (CR2 . CR .  getTranslation('send_location')) : '');
     }else {
-        debug_log('Event? whatever this is: '.$config->RAID_POKEMON_DURATION_EVENT .' / '. $config->RAID_POKEMON_DURATION_SHORT);
+        debug_log('Start failed because event? whatever this is: '.$config->RAID_POKEMON_DURATION_EVENT .' / '. $config->RAID_POKEMON_DURATION_SHORT);
     }
 }
 

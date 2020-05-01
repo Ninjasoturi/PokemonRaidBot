@@ -4003,8 +4003,8 @@ function curl_json_response($json_response, $json)
             } else if (isset($response['result']['venue']['address']) && !empty($response['result']['venue']['address'])) {
                 // Get raid_id from address.
                 debug_log('Venue address message likely contains cleanup info!');
-                if(strpos($response['result']['venue']['address'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['venue']['address'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = '), 7);
+                if(strrpos($response['result']['venue']['address'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
+                    $cleanup_id = substr($response['result']['venue']['address'], strrpos($response['result']['venue']['address'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') + 7);
                 } else {
                     debug_log('BOT_ID ' . $config->BOT_ID . ' not found in venue address message!');
                 }
@@ -4013,17 +4013,17 @@ function curl_json_response($json_response, $json)
             } else if (!empty($response['result']['text'])) {
                 debug_log('Text message likely contains cleanup info!');
                 if(isset($response['result']['venue']['address']) && strpos($response['result']['venue']['address'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = '), 7);
-                } else if(strpos($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = '), 7);
+                    $cleanup_id = substr($response['result']['text'], strrpos($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') + 7);
+                } else if(strrpos($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
+                    $cleanup_id = substr($response['result']['text'], strrpos($response['result']['text'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') + 7);
                 }else {
                     debug_log('BOT_ID ' . $config->BOT_ID . ' not found in text message!');
                 }
             // Check if it's a caption and get raid id
             } else if (!empty($response['result']['caption'])) {
                 debug_log('Caption in a message likely contains cleanup info!');
-                if(strpos($response['result']['caption'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
-                    $cleanup_id = substr(strrchr($response['result']['caption'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = '), 7);
+                if(strrpos($response['result']['caption'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') !== false) {
+                    $cleanup_id = substr($response['result']['caption'], strrpos($response['result']['caption'], substr(strtoupper($config->BOT_ID), 0, 1) . '-ID = ') + 7);
                 } else {
                     debug_log('BOT_ID ' . $config->BOT_ID . ' not found in caption of message!');
                 }
@@ -4242,7 +4242,7 @@ function sendalarm($text, $raid, $user)
  * @param $user_id
  * @return bool
  */
-function newuser($user_id) {
+function new_user($user_id) {
 	debug_log("Checking for new users: ".$user_id);
 	$query = my_query("SELECT tutorial FROM users WHERE user_id = '{$user_id}'");
 	$res = $query->fetch_assoc();

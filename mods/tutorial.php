@@ -1,7 +1,7 @@
 <?php
 $action = $data['arg'];
 $user_id = $update['callback_query']['from']['id'];
-$new_user = newuser($user_id);
+$new_user = new_user($user_id);
 $end = false;
 $tutorial_count = count($tutorial)-1;
 
@@ -10,25 +10,27 @@ if($action == "end") {
 	if($new_user) {
 		my_query("UPDATE users SET tutorial = '1' WHERE user_id = '{$user_id}'");
 		
-		// Create content array.
-		$content = [
-			'method'     => 'restrictChatMember',
-			'chat_id'    => RESTRICTED_CHAT_ID,
-			'user_id'	 => $user_id,
-			'can_send_messages'       => 1,
-			'can_send_media_messages'       => 1,
-			'can_send_other_messages'       => 1
-		];
+        foreach($config->RESTRICTED_CHAT_ID as $chat_id) {
+            // Create content array.
+            $content = [
+                'method'     => 'restrictChatMember',
+                'chat_id'    => $chat_id,
+                'user_id'	 => $user_id,
+                'can_send_messages'       => 1,
+                'can_send_media_messages'       => 1,
+                'can_send_other_messages'       => 1
+            ];
 
-		// Encode data to json.
-		$json = json_encode($content);
+            // Encode data to json.
+            $json = json_encode($content);
 
-		// Set header to json.
-		header('Content-Type: application/json');
+            // Set header to json.
+            header('Content-Type: application/json');
 
 
-		// Send request to telegram api.
-		curl_json_request($json);
+            // Send request to telegram api.
+            curl_json_request($json);
+        }
 
 	}
 	delete_message($update['callback_query']['message']['chat']['id'],$update['callback_query']['message']['message_id']);

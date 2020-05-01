@@ -1,5 +1,5 @@
 <?php
-$new_user = newuser($update['message']['from']['id']);
+$new_user = new_user($update['message']['from']['id']);
 if($new_user) {
 	$msg = $tutorial[0]['msg_new'];
 }else {

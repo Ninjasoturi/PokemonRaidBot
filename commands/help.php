@@ -53,6 +53,24 @@ if($access && (is_file(ROOT_PATH . '/access/' . $access) || $access == 'BOT_ADMI
         $msg .= getTranslation('help_' . $p) . CR . CR;
     }
 // No help for the user.
+} elseif($config->TUTORIAL_MODE) {
+    $new_user = new_user($update['message']['from']['id']);
+    if($new_user) {
+        $msg = $tutorial[0]['msg_new'];
+    }else {
+        $msg = $tutorial[0]['msg'];
+    }
+    $keys = [
+    [
+        [
+            'text'          => 'Seuraava',
+            'callback_data' => '0:tutorial:0'
+        ]
+    ]
+    ];
+    $photo = $tutorial[0]['photo'];
+    send_photo($update['message']['from']['id'],$photo, $msg, $keys, ['disable_web_page_preview' => 'true']);
+    exit();
 } else {
     $msg = getTranslation('bot_access_denied');
 }

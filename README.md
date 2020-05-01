@@ -832,6 +832,15 @@ share-own
 share-any-chat
 ```
 
+## Tutorial mode
+
+Create `tutorial.php` in config folder. Use `tutorial.php.example` as reference.
+
+In `config.json`
+- `TUTORIAL_MODE` = (`true/false`) enable tutorial mode
+- `RESTRICTED_CHAT_ID` = json array of chat ID's where you want the bot to mute new users (after tutorial, the bot removes mute)
+- `CHAT_CLEANUP_TIME` = time in minutes before messages are deleted from chats listed in `RESTRICTED_CHAT_ID`
+
 # Customization
 
 The bot allows you to customize things and therefore has a folder 'custom' for your customizations.

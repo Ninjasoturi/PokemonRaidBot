@@ -3611,7 +3611,11 @@ function show_raid_poll($raid)
                 $msg = raid_poll_message($msg, ($row['arrived']) ? (EMOJI_HERE . ' ') : (($row['late']) ? (EMOJI_LATE . ' ') : '└ '));
                 $msg = raid_poll_message($msg, ($row['team'] === NULL) ? ($GLOBALS['teams']['unknown'] . ' ') : ($GLOBALS['teams'][$row['team']] . ' '));
                 $msg = raid_poll_message($msg, ($row['level'] == 0) ? ('<b>00</b> ') : (($row['level'] < 10) ? ('<b>0' . $row['level'] . '</b> ') : ('<b>' . $row['level'] . '</b> ')));
-                $msg = raid_poll_message($msg, '<a href="tg://user?id=' . $row['user_id'] . '">' . htmlspecialchars($row['name']) . '</a> ');
+                if($config->RAID_POLL_CHAR_SAVER) {
+                    $msg = raid_poll_message($msg,  htmlspecialchars($row['name']));
+                }else {
+                    $msg = raid_poll_message($msg, '<a href="tg://user?id=' . $row['user_id'] . '">' . htmlspecialchars($row['name']) . '</a> ');
+                }
                 $msg = raid_poll_message($msg, ($raid_level == 'X' && $row['invite']) ? (EMOJI_INVITE . ' ') : '');
                 $msg = raid_poll_message($msg, ($row['extra_mystic']) ? ('+' . $row['extra_mystic'] . TEAM_B . ' ') : '');
                 $msg = raid_poll_message($msg, ($row['extra_valor']) ? ('+' . $row['extra_valor'] . TEAM_R . ' ') : '');
@@ -3737,8 +3741,9 @@ function show_raid_poll($raid)
     }	
 	
     // Display creator.
-    $msg = raid_poll_message($msg, ($raid['user_id'] && $raid['name']) ? (CR . getPublicTranslation('created_by') . ': <a href="tg://user?id=' . $raid['user_id'] . '">' . htmlspecialchars($raid['name']) . '</a>') : '');
-
+    if(!$config->RAID_POLL_CHAR_SAVER) {
+        $msg = raid_poll_message($msg, ($raid['user_id'] && $raid['name']) ? (CR . getPublicTranslation('created_by') . ': <a href="tg://user?id=' . $raid['user_id'] . '">' . htmlspecialchars($raid['name']) . '</a>') : '');
+    }
     // Add update time and raid id to message.
     if(!$buttons_hidden) {
         $msg = raid_poll_message($msg, CR . '<i>' . getPublicTranslation('updated') . ': ' . dt2time('now', 'H:i:s') . '</i>');

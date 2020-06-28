@@ -11,7 +11,6 @@ bot_access_check($update, 'create');
 
 // Get gym data via ID in arg
 $gym_id = $data['arg'];
-$gym = get_gym($gym_id);
 
 // Back key id, action and arg
 $back_id = 0;
@@ -64,15 +63,15 @@ if ($duplicate_id > 0) {
     exit();
 }
 
+//Initiate admin rights table [ ex-raid , raid-event ]
+$admin_access = [false,false];
 // Check access - user must be admin for raid_level X
-$admin_access = bot_access_check($update, 'ex-raids', true);
-if ($admin_access) {
-    // Get the keys.
-    $keys = raid_edit_raidlevel_keys($gym_id, $gym_first_letter, true);
-} else {
-    // Get the keys.
-    $keys = raid_edit_raidlevel_keys($gym_id, $gym_first_letter);
-}
+$admin_access[0] = bot_access_check($update, 'ex-raids', true);
+// Check access - user must be admin for raid event creation
+$admin_access[1] = bot_access_check($update, 'event-raids', true);
+
+// Get the keys.
+$keys = raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin_access);
 
 // No keys found.
 if (!$keys) {
@@ -96,7 +95,7 @@ if (!$keys) {
 }
 
 // Build message.
-$msg = getTranslation('create_raid') . ': <i>' . $gym['address'] . '</i>';
+$msg = getTranslation('create_raid') . ': <i>' . (($gym['address']=="") ? $gym['gym_name'] : $gym['address']) . '</i>';
 
 // Build callback message string.
 $callback_response = getTranslation('gym_saved');

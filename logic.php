@@ -59,18 +59,27 @@ function raid_access_check($update, $data, $permission, $return_result = false)
 function active_raid_duplication_check($gym_id)
 {
     global $config;
-
+    if($config->RAID_EXCLUDE_EXRAID_DUPLICATION) {
+        $query_ex = "AND raid_level != 'X'";
+    }
+    if($config->RAID_EXCLUDE_EVENT_DUPLICATION) {
+        $query_event = "AND event = NULL";
+    }
     // Build query.
     $rs = my_query(
         "
-        SELECT id, pokemon, count(gym_id) AS active_raid
+        SELECT id, count(gym_id) AS active_raid
         FROM   raids
         WHERE  end_time > (UTC_TIMESTAMP() - INTERVAL 10 MINUTE)
         AND    gym_id = {$gym_id}
+            {$query_ex}
+            {$query_event}
         GROUP BY id
         "
     );
-
+    $raid = $rs->fetch_assoc();
+    
+/*
     // Init counter and raid id.
     $active_counter = 0;
     $active_raid_id = 0;
@@ -99,10 +108,10 @@ function active_raid_duplication_check($gym_id)
         $active_counter = $raid['active_raid'];
         $active_raid_id = $raid['id'];
    }
-
+*/
     // Return 0 or raid id
     if ($active_counter > 0) {
-        return $active_raid_id;
+        return $raid['id'];
     } else {
         return 0;
     }
@@ -822,40 +831,60 @@ function get_user($user_id)
  * Raid edit start keys.
  * @param $gym_id
  * @param $gym_first_letter
- * @param $admin
+ * @param $admin_access
+ * @param $event_id
  * @return array
  */
-function raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin = false)
+function raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin_access = [false,false], $event = false)
 {
     global $config;
-    // Get all raid levels from database
-    $rs = my_query(
-            "
+    // Set event ID to null if no event was selected
+    if($event === false) {
+        $event_id = "N";
+    }else {
+        $event_id = $event;
+    }
+   
+    $query = "";
+    if($event_id == "N") {
+        $query = "
+            SELECT    raid_level, COUNT(*) AS raid_level_count
+            FROM      pokemon
+            WHERE     raid_level != '0'
+                AND   raid_level != 'X'
+            GROUP BY  raid_level
+            ORDER BY  FIELD(raid_level, '5', '4', '3', '2', '1')
+            ";
+    }else {
+        $query = "
             SELECT    raid_level, COUNT(*) AS raid_level_count
             FROM      pokemon
             WHERE     raid_level != '0'
             GROUP BY  raid_level
             ORDER BY  FIELD(raid_level, '5', '4', '3', '2', '1', 'X')
-            "
-        );
+            ";
+    }
+
+    // Get all raid levels from database
+    $rs = my_query($query);
 
     // Init empty keys array.
     $keys = [];
-
+    
+    
     // Add key for each raid level
     while ($level = $rs->fetch_assoc()) {
+        // Raid level and aciton
+        $raid_level = $level['raid_level'];
         // Continue if user is not part of the $config->BOT_ADMINS and raid_level is X
-        if($level['raid_level'] == 'X' && $admin === false) continue;
-
+        if($level['raid_level'] == 'X' && $admin_access[0] === false) continue;
+        
         // Add key for pokemon if we have just 1 pokemon for a level
         if($level['raid_level_count'] == 1) {
-            // Raid level and aciton
-            $raid_level = $level['raid_level'];
-
             // Get pokemon from database
             $rs_rl = my_query(
                 "
-                SELECT    pokedex_id, pokemon_form
+                SELECT    id, pokedex_id, pokemon_form
                 FROM      pokemon
                 WHERE     raid_level = '{$raid_level}'
                 "
@@ -865,16 +894,23 @@ function raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin = false)
             while ($pokemon = $rs_rl->fetch_assoc()) {
                 $keys[] = array(
                     'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']),
-                    'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_starttime:' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']
+                    'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_starttime:' . $event_id . ',' . $raid_level . ',' . $pokemon['id']
                 );
             }
         } else {
             // Add key for raid level
             $keys[] = array(
-                'text'          => getTranslation($level['raid_level'] . 'stars'),
-                'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_pokemon:' . $level['raid_level']
+                'text'          => getTranslation($raid_level . 'stars'),
+                'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_pokemon:' . $event_id . ',' . $raid_level
             );
         }
+    }
+    // Add key for raid event if user is a part of $config->BOT_ADMINS
+    if($admin_access[1] === true && $event === false) {
+        $keys[] = array(
+            'text'          => getTranslation('event'),
+            'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_event:0'
+        );
     }
 
     // Get the inline key array.
@@ -1251,9 +1287,10 @@ function edit_pokedex_keys($limit, $action)
  * Pokemon keys.
  * @param $gym_id_plus_letter
  * @param $raid_level
+ * @param $event_id
  * @return array
  */
-function pokemon_keys($gym_id_plus_letter, $raid_level, $action)
+function pokemon_keys($gym_id_plus_letter, $raid_level, $action, $event_id = false)
 {
     // Init empty keys array.
     $keys = [];
@@ -1261,7 +1298,7 @@ function pokemon_keys($gym_id_plus_letter, $raid_level, $action)
     // Get pokemon from database
     $rs = my_query(
             "
-            SELECT    pokedex_id, pokemon_form
+            SELECT    id, pokedex_id, pokemon_form
             FROM      pokemon
             WHERE     raid_level = '$raid_level'
             "
@@ -1271,7 +1308,7 @@ function pokemon_keys($gym_id_plus_letter, $raid_level, $action)
     while ($pokemon = $rs->fetch_assoc()) {
         $keys[] = array(
             'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']),
-            'callback_data' => $gym_id_plus_letter . ':' . $action . ':' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']
+            'callback_data' => $gym_id_plus_letter . ':' . $action . ':' . (($event_id!==false) ? $event_id . ',' . $raid_level . ',' : '') . $pokemon['id']
         );
     }
 
@@ -1600,7 +1637,7 @@ function run_cleanup ($telegram = 2, $database = 2) {
         // Init empty cleanup jobs array.
         $cleanup_jobs = [];
 
-	// Fill array with cleanup jobs.
+        // Fill array with cleanup jobs.
         while ($rowJob = $rs->fetch_assoc()) {
             $cleanup_jobs[] = $rowJob;
         }
@@ -1620,8 +1657,8 @@ function run_cleanup ($telegram = 2, $database = 2) {
         $prev_raid_id = "FIRST_RUN";
 
         foreach ($cleanup_jobs as $row) {
-	    // Set current raid id.
-	    $current_raid_id = ($row['raid_id'] == 0) ? $row['cleaned'] : $row['raid_id'];
+            // Set current raid id.
+            $current_raid_id = ($row['raid_id'] == 0) ? $row['cleaned'] : $row['raid_id'];
 
             // Write to log.
             cleanup_log("Cleanup ID: " . $row['id']);
@@ -1658,65 +1695,65 @@ function run_cleanup ($telegram = 2, $database = 2) {
                 continue;
             }
 
-	    // Get raid data only when raid_id changed compared to previous run
-	    if ($prev_raid_id != $current_raid_id) {
+            // Get raid data only when raid_id changed compared to previous run
+            if ($prev_raid_id != $current_raid_id) {
                 // Now.
                 $now = utcnow('YmdHis');
                 $log_now = utcnow();
 
-	        // Set cleanup time for telegram. 
+                // Set cleanup time for telegram. 
                 $cleanup_time_tg = new DateTimeImmutable($raid['end_time'], new DateTimeZone('UTC'));
                 $cleanup_time_tg = $cleanup_time_tg->add(new DateInterval("PT".$config->CLEANUP_TIME_TG."M"));
                 $clean_tg = $cleanup_time_tg->format('YmdHis');
                 $log_clean_tg = $cleanup_time_tg->format('Y-m-d H:i:s');
 
-	        // Set cleanup time for database. 
+                // Set cleanup time for database. 
                 $cleanup_time_db = new DateTimeImmutable($raid['end_time'], new DateTimeZone('UTC'));
                 $cleanup_time_db = $cleanup_time_db->add(new DateInterval("PT".$config->CLEANUP_TIME_DB."M"));
                 $clean_db = $cleanup_time_db->format('YmdHis');
                 $log_clean_db = $cleanup_time_db->format('Y-m-d H:i:s');
 
-		// Write times to log.
-		cleanup_log($log_now, 'Current UTC time:');
-		cleanup_log($raid['end_time'], 'Raid UTC end time:');
-		cleanup_log($log_clean_tg, 'Telegram UTC cleanup time:');
-		cleanup_log($log_clean_db, 'Database UTC cleanup time:');
-	    }
+                // Write times to log.
+                cleanup_log($log_now, 'Current UTC time:');
+                cleanup_log($raid['end_time'], 'Raid UTC end time:');
+                cleanup_log($log_clean_tg, 'Telegram UTC cleanup time:');
+                cleanup_log($log_clean_db, 'Database UTC cleanup time:');
+            }
 
-	    // Time for telegram cleanup?
-	    if ($clean_tg < $now) {
+            // Time for telegram cleanup?
+            if ($clean_tg < $now) {
                 // Delete raid poll telegram message if not already deleted
-	        if ($telegram == 1 && $row['chat_id'] != 0 && $row['message_id'] != 0) {
-		    // Delete telegram message.
+                if ($telegram == 1 && $row['chat_id'] != 0 && $row['message_id'] != 0) {
+                    // Delete telegram message.
                     cleanup_log('Deleting telegram message ' . $row['message_id'] . ' from chat ' . $row['chat_id'] . ' for raid ' . $row['raid_id']);
                     delete_message($row['chat_id'], $row['message_id']);
-		    // Set database values of chat_id and message_id to 0 so we know telegram message was deleted already.
+                    // Set database values of chat_id and message_id to 0 so we know telegram message was deleted already.
                     cleanup_log('Updating telegram cleanup information.');
-		    my_query(
-    		    "
-    		        UPDATE    cleanup
-    		        SET       chat_id = 0, 
-    		                  message_id = 0 
-      		        WHERE   id = {$row['id']}
-		    ", true
-		    );
-	        } else {
-		    if ($telegram == 1) {
-			cleanup_log('Telegram message is already deleted!');
-		    } else {
-			cleanup_log('Telegram cleanup was not triggered! Skipping...');
-		    }
-		}
-	    } else {
-		cleanup_log('Skipping cleanup of telegram for this raid! Cleanup time has not yet come...');
-	    }
+                    my_query(
+                        "
+                            UPDATE    cleanup
+                            SET       chat_id = 0, 
+                                      message_id = 0 
+                            WHERE   id = {$row['id']}
+                    ", true
+                    );
+                } else {
+                    if ($telegram == 1) {
+                        cleanup_log('Telegram message is already deleted!');
+                    } else {
+                        cleanup_log('Telegram cleanup was not triggered! Skipping...');
+                    }
+                }
+            } else {
+                cleanup_log('Skipping cleanup of telegram for this raid! Cleanup time has not yet come...');
+            }
 
-	    // Time for database cleanup?
-	    if ($clean_db < $now) {
+            // Time for database cleanup?
+            if ($clean_db < $now) {
                 // Delete raid from attendance table.
-	        // Make sure to delete only once - raid may be in multiple channels/supergroups, but only 1 time in database
-	        if (($database == 1) && $row['raid_id'] != 0 && ($prev_raid_id != $current_raid_id)) {
-		    // Delete raid from attendance table.
+                // Make sure to delete only once - raid may be in multiple channels/supergroups, but only 1 time in database
+                if (($database == 1) && $row['raid_id'] != 0 && ($prev_raid_id != $current_raid_id)) {
+                    // Delete raid from attendance table.
                     cleanup_log('Deleting attendances for raid ' . $current_raid_id);
                     my_query(
                     "
@@ -1725,71 +1762,71 @@ function run_cleanup ($telegram = 2, $database = 2) {
                     ", true
                     );
 
-		    // Set database value of raid_id to 0 so we know attendance info was deleted already
-		    // Use raid_id in where clause since the same raid_id can in cleanup more than once
+                    // Set database value of raid_id to 0 so we know attendance info was deleted already
+                    // Use raid_id in where clause since the same raid_id can in cleanup more than once
                     cleanup_log('Updating database cleanup information.');
                     my_query(
                     "
                         UPDATE    cleanup
                         SET       raid_id = 0, 
-				  cleaned = {$row['raid_id']}
+                  cleaned = {$row['raid_id']}
                         WHERE   raid_id = {$row['raid_id']}
                     ", true
                     );
-	        } else {
-		    if ($database == 1) {
-		        cleanup_log('Attendances are already deleted!');
-		    } else {
-			cleanup_log('Attendance cleanup was not triggered! Skipping...');
-		    }
-		}
+                } else {
+                    if ($database == 1) {
+                        cleanup_log('Attendances are already deleted!');
+                    } else {
+                        cleanup_log('Attendance cleanup was not triggered! Skipping...');
+                    }
+                }
 
-		// Delete raid from cleanup table and raid table once every value is set to 0 and cleaned got updated from 0 to the raid_id
-		// In addition trigger deletion only when previous and current raid_id are different to avoid unnecessary sql queries
-		if ($row['raid_id'] == 0 && $row['chat_id'] == 0 && $row['message_id'] == 0 && $row['cleaned'] != 0 && ($prev_raid_id != $current_raid_id)) {
-		    // Delete raid from raids table.
-		    cleanup_log('Deleting raid ' . $row['cleaned'] . ' from database.');
-                    my_query(
-                    "
-                        DELETE FROM    raids
-                        WHERE   id = {$row['cleaned']}
-                    ", true
-                    );
-		    
-		    // Get all cleanup jobs which will be deleted now.
-                    cleanup_log('Removing cleanup info from database:');
-		    $rs_cl = my_query(
-                    "
-                        SELECT *
-			FROM    cleanup
-                        WHERE   cleaned = {$row['cleaned']}
-                    ", true
-		    );
+                // Delete raid from cleanup table and raid table once every value is set to 0 and cleaned got updated from 0 to the raid_id
+                // In addition trigger deletion only when previous and current raid_id are different to avoid unnecessary sql queries
+                if ($row['raid_id'] == 0 && $row['chat_id'] == 0 && $row['message_id'] == 0 && $row['cleaned'] != 0 && ($prev_raid_id != $current_raid_id)) {
+                    // Delete raid from raids table.
+                    cleanup_log('Deleting raid ' . $row['cleaned'] . ' from database.');
+                        my_query(
+                        "
+                            DELETE FROM    raids
+                            WHERE   id = {$row['cleaned']}
+                        ", true
+                        );
+                
+                        // Get all cleanup jobs which will be deleted now.
+                        cleanup_log('Removing cleanup info from database:');
+                        $rs_cl = my_query(
+                                "
+                                    SELECT *
+                        FROM    cleanup
+                                    WHERE   cleaned = {$row['cleaned']}
+                                ", true
+                        );
 
-		    // Log each cleanup ID which will be deleted.
-		    while($rs_cleanups = $rs_cl->fetch_assoc()) {
- 			cleanup_log('Cleanup ID: ' . $rs_cleanups['id'] . ', Former Raid ID: ' . $rs_cleanups['cleaned']);
-		    }
+                    // Log each cleanup ID which will be deleted.
+                    while($rs_cleanups = $rs_cl->fetch_assoc()) {
+                        cleanup_log('Cleanup ID: ' . $rs_cleanups['id'] . ', Former Raid ID: ' . $rs_cleanups['cleaned']);
+                    }
 
-		    // Finally delete from cleanup table.
+                    // Finally delete from cleanup table.
                     my_query(
                     "
                         DELETE FROM    cleanup
                         WHERE   cleaned = {$row['cleaned']}
                     ", true
                     );
-		} else {
-		    if ($prev_raid_id != $current_raid_id) {
-			cleanup_log('Time for complete removal of raid from database has not yet come.');
-		    } else {
-			cleanup_log('Complete removal of raid from database was already done!');
-		    }
-		}
-	    } else {
-		cleanup_log('Skipping cleanup of database for this raid! Cleanup time has not yet come...');
-	    }
-	
-	    // Store current raid id as previous id for next loop
+                } else {
+                    if ($prev_raid_id != $current_raid_id) {
+                        cleanup_log('Time for complete removal of raid from database has not yet come.');
+                    } else {
+                        cleanup_log('Complete removal of raid from database was already done!');
+                    }
+                }
+            } else {
+                cleanup_log('Skipping cleanup of database for this raid! Cleanup time has not yet come...');
+            }
+        
+            // Store current raid id as previous id for next loop
             $prev_raid_id = $current_raid_id;
         }
 
@@ -4304,4 +4341,49 @@ function get_gym_image($img_url) {
         $return_path = $img_url;
     }
     return $return_path;
+}
+
+/**
+ * Event keys.
+ * @param $gym_id_plus_letter
+ * @param $action
+ * @return array
+ */
+function event_keys($gym_id_plus_letter, $action) {
+    $q = my_query("
+            SELECT      id,
+                        name
+            FROM
+                        events
+            ");
+    while($event = $q->fetch_assoc()) {
+        $keys[] = array(
+            'text'          => $event['name'],
+            'callback_data' => $gym_id_plus_letter . ':' . $action . ':' . $event['id']
+        );
+    }
+    $keys[] = array(
+        'text'          => getTranslation("Xstars"),
+        'callback_data' => $gym_id_plus_letter . ':' . $action . ':X'
+    );
+    // Get the inline key array.
+    $keys = inline_key_array($keys, 1);
+
+    return $keys;
+}
+
+/**
+ * Get pokemon name and form with id from database.
+ * @param $pokemon_id
+ * @return string
+ */
+function get_pokemon_name_form($pokemon_id) {
+    $q = my_query("
+            SELECT  pokedex_id, 
+                    pokemon_form 
+            FROM    pokemon
+            WHERE   id = '{$pokemon_id}'
+            ");
+    $return = $q->fetch_assoc();
+    return $return['pokedex_id']."-".$return['pokemon_form'];
 }

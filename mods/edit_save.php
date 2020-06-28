@@ -96,7 +96,7 @@ if ($update['callback_query']['message']['chat']['type'] == 'private') {
             [
                 [
                     'text'          => getTranslation('change_raid_duration'),
-                    'callback_data' => $id . ':edit_time:0,0,more,1'
+                    'callback_data' => $id . ':edit_time:'.(isset($event_id) ? $event_id.','.$raid_level:'').',0,0,more,1'
                 ]
             ]
         ];
@@ -108,7 +108,7 @@ if ($update['callback_query']['message']['chat']['type'] == 'private') {
     $raid_duration = $raid['t_duration'];
 
     // Get raid level.
-    $raid_level = get_raid_level($raid['pokemon']);
+    $raid_level = $raid['raid_level'];
     $const = 'SHARE_CHATS_LEVEL_' . $raid_level;
     $const_chats = $config->{$const};
 

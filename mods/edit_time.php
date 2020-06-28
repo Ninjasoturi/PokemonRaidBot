@@ -11,7 +11,6 @@ bot_access_check($update, 'create');
 
 // Get count of ID and argument.
 $count_id = substr_count($data['id'], ',');
-$count_arg = substr_count($data['arg'], ',');
 
 // Set the id.
 // Count 0 means we just received the raid_id
@@ -28,24 +27,24 @@ if($count_id == 0) {
 }
 
 // Set the arg.
-// Count 1 means we received pokemon_id and starttime 
-// Count 2 means we received pokemon_id, starttime and an optional argument
-// Count 3 means we received pokemon_id, starttime, optional argument and slot switch
-$pokemon_time = explode(',', $data['arg']);
+// Count 3 means we received pokemon_id and starttime 
+// Count 4 means we received pokemon_id, starttime and an optional argument
+// Count 5 means we received pokemon_id, starttime, optional argument and slot switch
+$arg_data = explode(',', $data['arg']);
+$count_arg = count($arg_data);
+$event_id = $arg_data[0];
+$raid_level = $arg_data[1];
 $opt_arg = 'new-raid';
 $slot_switch = 0;
-if($count_arg == 1) {
-    $pokemon_id = $pokemon_time[0];
-    $starttime = $pokemon_time[1];
-} else if($count_arg == 2) {
-    $pokemon_id = $pokemon_time[0]; 
-    $starttime = $pokemon_time[1];
-    $opt_arg = $pokemon_time[2];
-} else if($count_arg == 3) {
-    $pokemon_id = $pokemon_time[0];
-    $starttime = $pokemon_time[1];
-    $opt_arg = $pokemon_time[2];
-    $slot_switch = $pokemon_time[3];
+if($count_arg >= 4) {
+    $pokemon_id = $arg_data[2];
+    $starttime = $arg_data[3];
+} 
+if($count_arg >= 5) {
+    $opt_arg = $arg_data[4];
+}
+if($count_arg >= 6) {
+    $slot_switch = $arg_data[5];
 }
 
 // Write to log.
@@ -66,8 +65,8 @@ if ($raid_id == 0 && $gym_id != 0) {
     $arg_time = str_replace('-', ':', $starttime);
 
     // Ex-Raid or normal raid?
-    if($opt_arg == 'X') {
-        debug_log('Ex-Raid time :D ... Setting raid date to ' . $arg_time);
+    if($event_id != 'N') {
+        debug_log('Event time :D ... Setting raid date to ' . $arg_time);
         $start_date_time = $arg_time;
     } else {
         // Current date
@@ -92,17 +91,27 @@ if ($raid_id == 0 && $gym_id != 0) {
     if($duplicate_id == 0) {
         // Now.
         $now = utcnow();
-
+        
+        $pokemon_name_form = get_pokemon_name_form($pokemon_id);
+        
+        // Saving event info to db. N = null, X = 0
+        // Info about ex raid is collected from raid_level
+        $event = (($event_id == "N") ? "NULL" : "'" . (($event_id=="X") ? "0" : $event_id ). "'");
+        debug_log("Event: ".$event);
+        debug_log("Event-id: ".$event_id);
+        debug_log("Raid level: ".$raid_level);
         // Create raid in database.
         $rs = my_query(
             "
             INSERT INTO   raids
             SET           user_id = {$update['callback_query']['from']['id']},
-			  pokemon = '{$pokemon_id}',
+			  pokemon = '{$pokemon_name_form}',
 			  first_seen = UTC_TIMESTAMP(),
 			  start_time = '{$start_date_time}',
                           end_time = DATE_ADD(start_time, INTERVAL {$duration} MINUTE),
-			  gym_id = '{$gym_id}'
+			  gym_id = '{$gym_id}',
+              event = {$event},
+              raid_level = '{$raid_level}'
             "
         );
 
@@ -162,14 +171,14 @@ if($opt_arg == 'more') {
     if ($slot_switch == 0) {
         // Event running?
         if($config->RAID_POKEMON_DURATION_EVENT != $config->RAID_POKEMON_DURATION_SHORT) {
-	    $slotmax = $config->RAID_POKEMON_DURATION_EVENT;
+            $slotmax = $config->RAID_POKEMON_DURATION_EVENT;
         } else {
-	    $slotmax = $config->RAID_POKEMON_DURATION_SHORT;
+            $slotmax = $config->RAID_POKEMON_DURATION_SHORT;
         }
-	$slotsize = 1;
+        $slotsize = 1;
     } else {
-	$slotmax = $config->RAID_POKEMON_DURATION_LONG;
-	$slotsize = 5;
+        $slotmax = $config->RAID_POKEMON_DURATION_LONG;
+        $slotsize = 5;
     }
 
     for ($i = $slotmax; $i >= 15; $i = $i - $slotsize) {
@@ -193,7 +202,7 @@ if($opt_arg == 'more') {
         $data['id'] = $raid_id;
         $data['action'] = 'edit_save';
         $data['arg'] = $config->RAID_POKEMON_DURATION_SHORT;
-
+        
         // Write to log.
         debug_log($data, '* NEW DATA= ');
 
@@ -234,7 +243,7 @@ $keys = inline_key_array($keys, 5);
 debug_log($keys);
 
 // Build callback message string.
-if ($opt_arg != 'more' && $opt_arg !='X') {
+if ($opt_arg != 'more' && $event_id == 'N') {
     $callback_response = getTranslation('start_date_time') . ' ' . $arg_time;
 } else {
     $callback_response = getTranslation('raid_starts_when_view_changed');

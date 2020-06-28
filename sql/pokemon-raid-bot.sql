@@ -43,6 +43,17 @@ CREATE TABLE `cleanup` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `events` (
+  `id` int(3) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(45) CHARACTER SET latin1 NOT NULL,
+  `description` varchar(200) CHARACTER SET latin1 NOT NULL,
+  `vote_key_mode` int(3) DEFAULT 0,
+  `time_slots` int(3) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `gyms` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `lat` decimal(19,16) DEFAULT NULL,

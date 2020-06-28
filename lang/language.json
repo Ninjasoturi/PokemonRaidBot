@@ -95,6 +95,18 @@
     "PL": "Nieaktywny",
     "FI": "Pois käytöstä"
   },
+  "event": {
+    "NL": "TRANSLATE",
+    "DE": "TRANSLATE",
+    "EN": "Event",
+    "IT": "TRANSLATE",
+    "PT-BR": "TRANSLATE",
+    "RU": "TRANSLATE",
+    "NO": "TRANSLATE",
+    "FR": "TRANSLATE",
+    "PL": "TRANSLATE",
+    "FI": "Tapahtuma"
+  },
   "egg_5": {
     "NL": "Level 5 Ei",
     "DE": "Level 5 Ei",

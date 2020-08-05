@@ -78,40 +78,13 @@ function active_raid_duplication_check($gym_id)
         "
     );
     $raid = $rs->fetch_assoc();
-    
-/*
-    // Init counter and raid id.
-    $active_counter = 0;
-    $active_raid_id = 0;
 
-    // Get row - allow normal and ex-raid at the gym.
-    if($config->RAID_EXCLUDE_EXRAID_DUPLICATION) {
-        while ($raid = $rs->fetch_assoc()) {
-            $active = $raid['active_raid'];
-            if ($active > 0) {
-                // Exclude ex-raid pokemon.
-                $raid_level = get_raid_level($raid['pokemon']);
-                if($raid_level == 'X') {
-                    continue;
-                } else {
-                    $active_raid_id = $raid['id'];
-                    $active_counter = $active_counter + 1;
-                    break;
-                }
-            // No active raids.
-            } else {
-                break;
-            }
-        }
-    } else {
-        $raid = $rs->fetch_assoc();
-        $active_counter = $raid['active_raid'];
-        $active_raid_id = $raid['id'];
-   }
-*/
+    $active_counter = $raid['active_raid'];
+    $active_raid_id = $raid['id'];
+
     // Return 0 or raid id
     if ($active_counter > 0) {
-        return $raid['id'];
+        return $active_raid_id;
     } else {
         return 0;
     }
@@ -3389,7 +3362,18 @@ function show_raid_poll($raid)
         $msg = raid_poll_message($msg, getPublicTranslation('pokemon_move_' . $raid['move1']) . '/' . getPublicTranslation('pokemon_move_' . $raid['move2']));
         $msg = raid_poll_message($msg, CR);
     }
-
+    
+    if($raid['event'] > 0) {
+        $event_query = my_query("SELECT name, description FROM events WHERE id = {$raid['event']}");
+        $raid_event = $event_query->fetch_assoc();
+        
+        $msg = raid_poll_message($msg, '<b>'.$raid_event['name'].'</b>'.CR);
+        $msg = raid_poll_message($msg, $raid_event['description'].CR.CR);
+        if($raid['event_note'] !== NULL) {
+            $msg = raid_poll_message($msg, $raid['event_note'].CR);
+        }
+    }
+    
     // Hide participants?
     if($config->RAID_POLL_HIDE_USERS_TIME > 0) {
         if($config->RAID_ANYTIME) {
@@ -4014,12 +3998,12 @@ function curl_json_response($json_response, $json)
         // Write error to log.
         debug_log('ERROR: ' . $json . "\n\n" . $json_response . "\n\n");
     } else {
-	// Result seems ok, get message_id and chat_id if supergroup or channel message
-	if (isset($response['result']['chat']['type']) && ($response['result']['chat']['type'] == "channel" || $response['result']['chat']['type'] == "supergroup")) {
+        // Result seems ok, get message_id and chat_id if supergroup or channel message
+        if (isset($response['result']['chat']['type']) && ($response['result']['chat']['type'] == "channel" || $response['result']['chat']['type'] == "supergroup")) {
             // Init cleanup_id
             $cleanup_id = 0;
 
-	    // Set chat and message_id
+            // Set chat and message_id
             $chat_id = $response['result']['chat']['id'];
             $message_id = $response['result']['message_id'];
 
@@ -4029,19 +4013,19 @@ function curl_json_response($json_response, $json)
             // Write to log that message was shared with channel or supergroup
             debug_log('Message was shared with ' . $response['result']['chat']['type'] . ' ' . $response['result']['chat']['title']);
             debug_log('Checking input for cleanup info now...');
-            
-	    // Check if callback_data is present to get the cleanup id
+                
+            // Check if callback_data is present to get the cleanup id
             if (!empty($response['result']['reply_markup']['inline_keyboard']['0']['0']['callback_data'])) {
                 debug_log('Callback Data of this message likely contains cleanup info!');
                 $split_callback_data = explode(':', $response['result']['reply_markup']['inline_keyboard']['0']['0']['callback_data']);
-	        // Get raid_id, but check for $config->BRIDGE_MODE first
-	        if($config->BRIDGE_MODE) {
-		    $cleanup_id = $split_callback_data[1];
-		} else {
-		    $cleanup_id = $split_callback_data[0];
-	        }
+                // Get raid_id, but check for $config->BRIDGE_MODE first
+                if($config->BRIDGE_MODE) {
+                    $cleanup_id = $split_callback_data[1];
+                } else {
+                    $cleanup_id = $split_callback_data[0];
+                }
 
-            // Check if it's a venue and get raid id
+                // Check if it's a venue and get raid id
             } else if (isset($response['result']['venue']['address']) && !empty($response['result']['venue']['address'])) {
                 // Get raid_id from address.
                 debug_log('Venue address message likely contains cleanup info!');
@@ -4078,13 +4062,13 @@ function curl_json_response($json_response, $json)
                 debug_log('Chat_ID: ' . $chat_id);
                 debug_log('Message_ID: ' . $message_id);
 
-	        // Trigger cleanup preparation process when necessary id's are not empty and numeric
-	        if (!empty($chat_id) && !empty($message_id) && !empty($cleanup_id)) {
-		    debug_log('Calling cleanup preparation now!');
-		    insert_cleanup($chat_id, $message_id, $cleanup_id);
-	        } else {
-		    debug_log('Missing input! Cannot call cleanup preparation!');
-		}
+                // Trigger cleanup preparation process when necessary id's are not empty and numeric
+                if (!empty($chat_id) && !empty($message_id) && !empty($cleanup_id)) {
+                    debug_log('Calling cleanup preparation now!');
+                    insert_cleanup($chat_id, $message_id, $cleanup_id);
+                } else {
+                    debug_log('Missing input! Cannot call cleanup preparation!');
+                }
             } else if($cleanup_id != '0' && $cleanup_id == 'trainer') {
                 debug_log('Detected trainer info message from callback_data!');
                 debug_log('Chat_ID: ' . $chat_id);
@@ -4117,7 +4101,7 @@ function curl_json_response($json_response, $json)
                 debug_log('Adding overview info to database now!');
                 insert_overview($chat_id, $message_id);
             }
-	}
+        }
     }
 
     // Return response.

@@ -201,6 +201,7 @@ foreach ($update as $raid) {
     $pokemon = $pokemon . '-normal';
     $start_timestamp = $raid['message']['start'];
     $end_timestamp = $raid['message']['end'];
+    $raid_level = $raid['message']['level'];
     $start = gmdate("Y-m-d H:i:s",$start_timestamp);
     $end = gmdate("Y-m-d H:i:s",$end_timestamp);
     $team = $raid['message']['team_id'];
@@ -234,7 +235,8 @@ foreach ($update as $raid) {
                     gym_team = :gym_team,
                     move1 = :move1,
                     move2 = :move2,
-                    gender = :gender
+                    gender = :gender,
+                    raid_level = :raid_level
                 WHERE
                     id LIKE :id
             ';
@@ -245,6 +247,7 @@ foreach ($update as $raid) {
             $statement->bindValue(':move2', $move_2, PDO::PARAM_STR);
             $statement->bindValue(':gender', $gender, PDO::PARAM_STR);
             $statement->bindValue(':id', $raid_id, PDO::PARAM_INT);
+            $statement->bindValue(':raid_level', $raid_level, PDO::PARAM_INT);
             $statement->execute();
         }
         catch (PDOException $exception) {
@@ -285,8 +288,8 @@ foreach ($update as $raid) {
 
         $query = '
                 
-            INSERT INTO raids (pokemon, user_id, first_seen, start_time, end_time, gym_team, gym_id, move1, move2, gender)
-            VALUES (:pokemon, :user_id, :first_seen, :start_time, :end_time, :gym_team, :gym_id, :move1, :move2, :gender)
+            INSERT INTO raids (pokemon, user_id, first_seen, start_time, end_time, gym_team, gym_id, move1, move2, gender, raid_level)
+            VALUES (:pokemon, :user_id, :first_seen, :start_time, :end_time, :gym_team, :gym_id, :move1, :move2, :gender, :raid_level)
         ';
         $statement = $dbh->prepare( $query );
         $statement->bindValue(':pokemon', $pokemon, PDO::PARAM_STR);
@@ -299,6 +302,7 @@ foreach ($update as $raid) {
         $statement->bindValue(':move1', $move_1, PDO::PARAM_STR);
         $statement->bindValue(':move2', $move_2, PDO::PARAM_STR);
         $statement->bindValue(':gender', $gender, PDO::PARAM_STR);
+        $statement->bindValue(':raid_level', $raid_level, PDO::PARAM_STR);
         $statement->execute();
         $raid_id = $dbh->lastInsertId();
     }

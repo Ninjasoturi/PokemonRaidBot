@@ -79,8 +79,45 @@ if (isset($update['callback_query'])) {
         // Import portal.
         include_once(ROOT_PATH . '/mods/importal.php');
     } else {
-        // Logic to get the command
-        include_once(CORE_BOT_PATH . '/commands.php');
+        // Check if user is expected to be posting something we want to save to db
+        $q = my_query("SELECT id FROM raids WHERE event_note='{$update['message']['from']['id']}'");
+        debug_log("Found user from raids table: ".$update['message']['from']['id']);
+        if($q->num_rows > 0) {
+			$res = $q->fetch_assoc();
+            
+            $dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+            
+			$query = $dbh->prepare("UPDATE raids SET event_note=:text WHERE id = '{$res['id']}'");
+			$query->execute(array(':text' => $update['message']['text']));
+            
+			$msg = '';
+			$msg .= getTranslation('raid_saved') . CR;
+			$msg .= CR.'Note: '.$update['message']['text'].CR2;
+			$msg .= show_raid_poll_small(get_raid($res['id'])) . CR;
+			debug_log($msg);
+			$keys = [
+				[
+					[
+						'text'          => 'Muokkaa tekstiä',
+						'callback_data' => $res['id'] . ':edit_event_note:edit'
+					]
+				],
+				[
+					[
+						'text'          => getTranslation('delete'),
+						'callback_data' => $res['id'] . ':raids_delete:0'
+					]
+				]
+			];
+            $keys_share = share_keys($res['id'], 'raid_share', $update, $chats);
+			$keys = array_merge($keys, $keys_share);
+            
+            debug_log($keys);
+			send_message($update['message']['from']['id'],$msg,$keys,[]);
+        }else {
+            // Logic to get the command
+            include_once(CORE_BOT_PATH . '/commands.php');
+        }
     }
 }
 

@@ -2030,6 +2030,20 @@ function keys_vote($raid)
     if($config->RAID_REMOTEPASS_USERS) {
         $buttons_extra[0] = array_merge($buttons_extra[0], $button_remote[0]);
     }
+    
+    // Want invite key
+    $button_want_invite = [
+        [
+            [
+                'text'          => EMOJI_WANT_INVITE,
+                'callback_data' => $raid['id'] . ':vote_want_invite:0'
+            ]
+        ]
+    ];
+
+    if($config->RAID_WANT_INVITE) {
+        $buttons_extra[0] = array_merge($buttons_extra[0], $button_want_invite[0]);
+    }
 
     // Team and level keys.
     if($config->RAID_POLL_HIDE_BUTTONS_TEAM_LVL) {
@@ -3498,14 +3512,14 @@ function show_raid_poll($raid)
     $rs_cnt = my_query(
         "
         SELECT DISTINCT DATE_FORMAT(attend_time, '%Y%m%d%H%i%s') AS ts_att,
-                        count(attend_time)          AS count,
-                        sum(team = 'mystic')        AS count_mystic,
-                        sum(team = 'valor')         AS count_valor,
-                        sum(team = 'instinct')      AS count_instinct,
-                        sum(team IS NULL)           AS count_no_team,
-                        sum(extra_mystic)           AS extra_mystic,
-                        sum(extra_valor)            AS extra_valor,
-                        sum(extra_instinct)         AS extra_instinct,
+                        count(attend_time)                          AS count,
+                        sum(team = 'mystic' && want_invite = 0)     AS count_mystic,
+                        sum(team = 'valor' && want_invite = 0)      AS count_valor,
+                        sum(team = 'instinct' && want_invite = 0)   AS count_instinct,
+                        sum(team IS NULL)                           AS count_no_team,
+                        sum(extra_mystic)                           AS extra_mystic,
+                        sum(extra_valor)                            AS extra_valor,
+                        sum(extra_instinct)                         AS extra_instinct,
                         sum(IF(remote = '1', (remote = '1') + extra_mystic + extra_valor + extra_instinct, 0)) AS count_remote,
                         sum(IF(late = '1', (late = '1') + extra_mystic + extra_valor + extra_instinct, 0)) AS count_late,
                         sum(pokemon = '0')                   AS count_any_pokemon,
@@ -3594,9 +3608,9 @@ function show_raid_poll($raid)
                 "
                 SELECT DISTINCT DATE_FORMAT(attend_time, '%Y%m%d%H%i%s') AS ts_att,
                                 count(attend_time)          AS count,
-                                sum(team = 'mystic')        AS count_mystic,
-                                sum(team = 'valor')         AS count_valor,
-                                sum(team = 'instinct')      AS count_instinct,
+                                sum(team = 'mystic' && want_invite = 0)        AS count_mystic,
+                                sum(team = 'valor' && want_invite = 0)         AS count_valor,
+                                sum(team = 'instinct' && want_invite = 0)      AS count_instinct,
                                 sum(team IS NULL)           AS count_no_team,
                                 sum(extra_mystic)           AS extra_mystic,
                                 sum(extra_valor)            AS extra_valor,
@@ -3637,6 +3651,7 @@ function show_raid_poll($raid)
                             users.name,
                             users.level,
                             users.team,
+                            users.friendcode,
                             DATE_FORMAT(attend_time, '%Y%m%d%H%i%s') AS ts_att
                 FROM        attendance
                 LEFT JOIN   users
@@ -3745,6 +3760,8 @@ function show_raid_poll($raid)
                     }
                 }
 
+                $friendcode = ($row['friendcode']!=NULL) ? $row['friendcode'] : '';
+
                 // Add users: ARRIVED --- TEAM -- LEVEL -- NAME -- INVITE -- EXTRAPEOPLE
                 $msg = raid_poll_message($msg, ($row['arrived']) ? (EMOJI_HERE . ' ') : (($row['late']) ? (EMOJI_LATE . ' ') : '└ '));
                 //$msg = raid_poll_message($msg, ($row['arrived']) ? (($row['remote']) ? (EMOJI_REMOTE . ' ') : (EMOJI_HERE . ' ')) : (($row['late']) ? (EMOJI_LATE . ' ') : '└ '));
@@ -3756,6 +3773,7 @@ function show_raid_poll($raid)
                 $msg = raid_poll_message($msg, ($row['extra_mystic']) ? ('+' . $row['extra_mystic'] . TEAM_B . ' ') : '');
                 $msg = raid_poll_message($msg, ($row['extra_valor']) ? ('+' . $row['extra_valor'] . TEAM_R . ' ') : '');
                 $msg = raid_poll_message($msg, ($row['extra_instinct']) ? ('+' . $row['extra_instinct'] . TEAM_Y . ' ') : '');
+                $msg = raid_poll_message($msg, ($row['want_invite']) ? (EMOJI_WANT_INVITE.(($friendcode!='') ? ' <code>'.$friendcode.'</code>' : '')) : '');
                 $msg = raid_poll_message($msg, CR);
 
                 // Prepare next result

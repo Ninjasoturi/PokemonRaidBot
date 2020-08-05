@@ -27,6 +27,7 @@ CREATE TABLE `attendance` (
   `invite` tinyint(1) unsigned DEFAULT '0',
   `pokemon` varchar(20) DEFAULT '0',
   `alarm` tinyint(1) unsigned DEFAULT '0',
+  `want_invite` tinyint(1) unsigned DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `raid_id` (`raid_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -122,6 +123,7 @@ CREATE TABLE `users` (
   `trainername` varchar(200) CHARACTER SET utf8mb4 DEFAULT NULL,
   `team` enum('mystic','valor','instinct') DEFAULT NULL,
   `level` int(10) unsigned DEFAULT '0',
+  `friendcode` bigint(12) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `i_userid` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8;

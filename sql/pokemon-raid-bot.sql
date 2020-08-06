@@ -123,7 +123,7 @@ CREATE TABLE `users` (
   `trainername` varchar(200) CHARACTER SET utf8mb4 DEFAULT NULL,
   `team` enum('mystic','valor','instinct') DEFAULT NULL,
   `level` int(10) unsigned DEFAULT '0',
-  `friendcode` bigint(12) unsigned DEFAULT NULL,
+  `friendcode` varchar(12) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `i_userid` (`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8;

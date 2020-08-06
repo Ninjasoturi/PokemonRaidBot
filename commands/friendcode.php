@@ -7,7 +7,7 @@ debug_log('FRIENDCODE()');
 //debug_log($data);
 
 // Check access.
-bot_access_check($update, BOT_ACCESS);
+bot_access_check($update, 'friendcode');
 
 $friendcode = preg_replace( '/[^0-9]/', '', $update['message']['text']);
 

@@ -59,11 +59,12 @@ function raid_access_check($update, $data, $permission, $return_result = false)
 function active_raid_duplication_check($gym_id)
 {
     global $config;
+    $query_add = "";
     if($config->RAID_EXCLUDE_EXRAID_DUPLICATION) {
-        $query_ex = "AND raid_level != 'X'";
+        $query_add.= "AND raid_level != 'X'";
     }
     if($config->RAID_EXCLUDE_EVENT_DUPLICATION) {
-        $query_event = "AND event = NULL";
+        $query_add.= "AND event IS NULL";
     }
     // Build query.
     $rs = my_query(
@@ -72,8 +73,7 @@ function active_raid_duplication_check($gym_id)
         FROM   raids
         WHERE  end_time > (UTC_TIMESTAMP() - INTERVAL 10 MINUTE)
         AND    gym_id = {$gym_id}
-            {$query_ex}
-            {$query_event}
+                {$query_add}
         GROUP BY id
         "
     );

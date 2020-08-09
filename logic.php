@@ -196,7 +196,7 @@ function get_raid_level($pokedex_id)
                 SELECT    raid_level
                 FROM      pokemon
                 WHERE     pokedex_id = {$dex_id}
-                AND       pokemon_form = '{$dex_form}'
+                AND       pokemon_form_name = '{$dex_form}'
                 "
             );
 
@@ -263,7 +263,7 @@ function get_raid_with_pokemon($raid_id)
         "
         SELECT     raids.*,
                    gyms.lat, gyms.lon, gyms.address, gyms.gym_name, gyms.ex_gym, gyms.gym_note, gyms.gym_id, gyms.img_url,
-                   pokemon.pokedex_id, pokemon.pokemon_name, pokemon.pokemon_form, pokemon.raid_level, pokemon.min_cp, pokemon.max_cp, pokemon.min_weather_cp, pokemon.max_weather_cp, pokemon.weather, pokemon.shiny,
+                   pokemon.pokedex_id, pokemon.pokemon_name, pokemon.pokemon_form_name, pokemon.raid_level, pokemon.min_cp, pokemon.max_cp, pokemon.min_weather_cp, pokemon.max_weather_cp, pokemon.weather, pokemon.shiny, pokemon.pokemon_form_id, pokemon.asset_suffix,
                    users.name,
                    TIME_FORMAT(TIMEDIFF(end_time, UTC_TIMESTAMP()) + INTERVAL 1 MINUTE, '%k:%i') AS t_left,
                    TIMESTAMPDIFF(MINUTE,raids.start_time,raids.end_time) as t_duration
@@ -271,7 +271,7 @@ function get_raid_with_pokemon($raid_id)
         LEFT JOIN  gyms
         ON         raids.gym_id = gyms.id
         LEFT JOIN  pokemon
-        ON         raids.pokemon = CONCAT(pokemon.pokedex_id, '-', pokemon.pokemon_form)
+        ON         raids.pokemon = CONCAT(pokemon.pokedex_id, '-', pokemon.pokemon_form_name)
         LEFT JOIN  users
         ON         raids.user_id = users.user_id
         WHERE      raids.id = {$raidid}
@@ -516,10 +516,10 @@ function get_local_pokemon_name($pokemon_id_form, $override_language = false)
     } else if(empty($pokemon_name)) {
         $rs = my_query(
                 "
-                SELECT    pokemon_name, pokemon_form
+                SELECT    pokemon_name, pokemon_form_name
                 FROM      pokemon
                 WHERE     pokedex_id = {$pokedex_id}
-                AND       pokemon_form = '{$pokemon_form}'
+                AND       pokemon_form_name = '{$pokemon_form}'
                 "
             );
 
@@ -527,9 +527,9 @@ function get_local_pokemon_name($pokemon_id_form, $override_language = false)
             // Pokemon name
             $pokemon_name = $pokemon['pokemon_name'];
             // Pokemon form
-            if(!empty($pokemon['pokemon_form']) && $pokemon['pokemon_form'] != 'normal') {
-                $pokemon_form = $getTypeTranslation('pokemon_form_' . $pokemon['pokemon_form']);
-                $pokemon_name = (!empty($pokemon_form)) ? ($pokemon_name . SP . $pokemon_form) : ($pokemon_name . SP . ucfirst($pokemon['pokemon_form']));
+            if(!empty($pokemon['pokemon_form_name']) && $pokemon['pokemon_form_name'] != 'normal') {
+                $pokemon_form = $getTypeTranslation('pokemon_form_' . $pokemon['pokemon_form_name']);
+                $pokemon_name = (!empty($pokemon_form)) ? ($pokemon_name . SP . $pokemon_form) : ($pokemon_name . SP . ucfirst($pokemon['pokemon_form_name']));
             }
         }
     }
@@ -702,7 +702,7 @@ function get_pokemon_cp($pokemon_id_form)
             SELECT    min_cp, max_cp, min_weather_cp, max_weather_cp
             FROM      pokemon
             WHERE     pokedex_id = {$pokedex_id}
-            AND       pokemon_form = '{$pokemon_form}'
+            AND       pokemon_form_name = '{$pokemon_form}'
             "
         );
 
@@ -736,7 +736,7 @@ function get_formatted_pokemon_cp($pokemon_id_form, $override_language = false)
                 SELECT    min_cp, max_cp, min_weather_cp, max_weather_cp
                 FROM      pokemon
                 WHERE     pokedex_id = {$pokedex_id}
-                AND       pokemon_form = '{$pokemon_form}'
+                AND       pokemon_form_name = '{$pokemon_form}'
                 "
             );
 
@@ -778,7 +778,7 @@ function get_pokemon_weather($pokemon_id_form)
                 SELECT    weather
                 FROM      pokemon
                 WHERE     pokedex_id = {$pokedex_id}
-                AND       pokemon_form = '{$pokemon_form}'
+                AND       pokemon_form_name = '{$pokemon_form}'
                 "
             );
 
@@ -901,7 +901,7 @@ function raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin = false)
             // Get pokemon from database
             $rs_rl = my_query(
                 "
-                SELECT    pokedex_id, pokemon_form
+                SELECT    pokedex_id, pokemon_form_name
                 FROM      pokemon
                 WHERE     raid_level = '{$raid_level}'
                 "
@@ -910,8 +910,8 @@ function raid_edit_raidlevel_keys($gym_id, $gym_first_letter, $admin = false)
             // Add key for pokemon
             while ($pokemon = $rs_rl->fetch_assoc()) {
                 $keys[] = array(
-                    'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']),
-                    'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_starttime:' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']
+                    'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name']),
+                    'callback_data' => $gym_id . ',' . $gym_first_letter . ':edit_starttime:' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name']
                 );
             }
         } else {
@@ -1066,7 +1066,7 @@ function raid_edit_gym_keys($first, $warn = true, $action = 'edit_raidlevel', $d
         LEFT JOIN raids
         ON        raids.gym_id = gyms.id
         LEFT JOIN pokemon
-        ON        raids.pokemon = CONCAT(pokemon.pokedex_id, '-', pokemon.pokemon_form)
+        ON        raids.pokemon = CONCAT(pokemon.pokedex_id, '-', pokemon.pokemon_form_name)
         WHERE     UPPER(LEFT(gym_name, $first_length)) = UPPER('{$first}')
         $not
         AND       gyms.show_gym = {$show_gym}
@@ -1214,9 +1214,9 @@ function edit_pokedex_keys($limit, $action)
     // Get all pokemon from database
     $rs = my_query(
         "
-        SELECT    pokedex_id, pokemon_form
+        SELECT    pokedex_id, pokemon_form_name
         FROM      pokemon
-        ORDER BY  pokedex_id, pokemon_form != 'normal', pokemon_form
+        ORDER BY  pokedex_id, pokemon_form_name != 'normal', pokemon_form_name
         LIMIT     $limit, $entries
         "
     );
@@ -1235,10 +1235,10 @@ function edit_pokedex_keys($limit, $action)
 
     // List users / moderators
     while ($mon = $rs->fetch_assoc()) {
-        $pokemon_name = get_local_pokemon_name($mon['pokedex_id'] . '-' . $mon['pokemon_form']);
+        $pokemon_name = get_local_pokemon_name($mon['pokedex_id'] . '-' . $mon['pokemon_form_name']);
         $keys[] = array(
             'text'          => $mon['pokedex_id'] . SP . $pokemon_name,
-            'callback_data' => $mon['pokedex_id'] . '-' . $mon['pokemon_form'] . ':pokedex_edit_pokemon:0'
+            'callback_data' => $mon['pokedex_id'] . '-' . $mon['pokemon_form_name'] . ':pokedex_edit_pokemon:0'
         );
     }
 
@@ -1307,7 +1307,7 @@ function pokemon_keys($gym_id_plus_letter, $raid_level, $action)
     // Get pokemon from database
     $rs = my_query(
             "
-            SELECT    pokedex_id, pokemon_form
+            SELECT    pokedex_id, pokemon_form_name
             FROM      pokemon
             WHERE     raid_level = '$raid_level'
             "
@@ -1316,8 +1316,8 @@ function pokemon_keys($gym_id_plus_letter, $raid_level, $action)
     // Add key for each raid level
     while ($pokemon = $rs->fetch_assoc()) {
         $keys[] = array(
-            'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']),
-            'callback_data' => $gym_id_plus_letter . ':' . $action . ':' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']
+            'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name']),
+            'callback_data' => $gym_id_plus_letter . ':' . $action . ':' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name']
         );
     }
 
@@ -2493,7 +2493,7 @@ function keys_vote($raid)
                     // Get pokemon from database
                     $rs = my_query(
                         "
-                        SELECT    pokedex_id, pokemon_form
+                        SELECT    pokedex_id, pokemon_form_name
                         FROM      pokemon
                         WHERE     raid_level = '$raid_level'
                         "
@@ -2509,8 +2509,8 @@ function keys_vote($raid)
                     while ($pokemon = $rs->fetch_assoc()) {
                         if(in_array($pokemon['pokedex_id'], $eggs)) continue;
                         $buttons_pokemon[] = array(
-                            'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form'], true),
-                            'callback_data' => $raid['id'] . ':vote_pokemon:' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form']
+                            'text'          => get_local_pokemon_name($pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name'], true),
+                            'callback_data' => $raid['id'] . ':vote_pokemon:' . $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_name']
                         );
 
                         // Counter

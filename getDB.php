@@ -58,6 +58,9 @@ foreach($master as $row) {
             if($form_name != "PURIFIED" && $form_name != "SHADOW") {
                 if(isset($form_translation[$form_name])) {
                     $gohub_form = $form_translation[$form_name];
+                }else if($pokemon_id == 150 && $form_name=="A") {
+                    // Because logic and consistency
+                    $gohub_form = "Armored";
                 }else {
                     $gohub_form = ucfirst(strtolower($form_name));
                 }
@@ -75,12 +78,17 @@ foreach($master as $row) {
                     echo 'Formatting data for pokemon id ' . $pokemon_id . ' (Form: ' . $gohub_form . ')' . PHP_EOL;
                 }
                 
+                $poke_name = ucfirst(strtolower(str_replace(["_FEMALE","_MALE"],["♀","♂"],$pokemon_name)));
+                $poke_name = str_replace("_","-",$poke_name);
+                $poke_form = $gohub_form;
+                
                 $poke_min_cp = $gohub_pokemon['CPs']['raidCaptureMin'];
                 $poke_max_cp = $gohub_pokemon['CPs']['raidCaptureMax'];
                 $poke_min_weather_cp = $gohub_pokemon['CPs']['raidCaptureBoostMin'];
                 $poke_max_weather_cp = $gohub_pokemon['CPs']['raidCaptureBoostMax'];
                 $poke_weather = implode(',',$gohub_pokemon['weatherInfluences']);
                 $poke_shiny = 0;
+                
                 
                 // Replace weather names with values.
                 $poke_weather = str_replace('sunny',12,$poke_weather);
@@ -93,9 +101,13 @@ foreach($master as $row) {
                 $poke_weather = str_replace(',','',$poke_weather);
 
                 $form_id = $form_ids[$form['form']];
-                $form_asset_suffix = (isset($form['assetBundleValue']) ? $form['assetBundleValue'] : "00");
-                $SQL.= "INSERT INTO pokemon (pokedex_id, pokemon_name, pokemon_form_name, pokemon_form_id, asset_suffix, min_cp, max_cp, min_weather_cp, max_weather_cp, weather, shiny)";
-                $SQL.= "VALUES ({$pokemon_id}, '{$pokemon_name}', '{$form_name}', {$form_id}, {$form_asset_suffix}, {$poke_min_cp}, {$poke_max_cp}, {$poke_min_weather_cp}, {$poke_max_weather_cp}, {$poke_weather}, {$poke_shiny});".PHP_EOL;
+                $form_asset_suffix = (isset($form['assetBundleValue']) ? $form['assetBundleValue'] : (isset($form['assetBundleSuffix'])?$form['assetBundleSuffix']:"00"));
+                
+                $SEP = ',';
+                $QM = "'";
+
+                $SQL.= "INSERT INTO pokemon (pokedex_id, pokemon_name, pokemon_form_name, pokemon_form_id, asset_suffix, min_cp, max_cp, min_weather_cp, max_weather_cp, weather, shiny) ";
+                $SQL.= "VALUES (". $QM . $pokemon_id . $QM . $SEP . $QM . $poke_name . $QM . $SEP . $QM . $poke_form . $QM . $SEP . $QM . $form_id . $QM . $SEP . $QM . $form_asset_suffix . $QM . $SEP . $QM . $poke_min_cp . $QM . $SEP . $QM . $poke_max_cp . $QM . $SEP . $QM . $poke_min_weather_cp . $QM . $SEP . $QM . $poke_max_weather_cp . $QM . $SEP . $QM . $poke_weather . $QM . $SEP . $QM . $poke_shiny . $QM .");".PHP_EOL;
             }
         }
     }
@@ -109,8 +121,8 @@ if(!empty($SQL)) {
         $form_name = 'normal';
         $pokemon_name = 'Level '. $e .' Egg';
         
-        $SQL.= "INSERT INTO pokemon (pokedex_id, pokemon_name, pokemon_form_name, pokemon_form_id, asset_suffix, min_cp, max_cp, min_weather_cp, max_weather_cp, weather, shiny)";
-        $SQL.= "VALUES ({$pokemon_id}, {$pokemon_name}, {$form_name}, 0, 0, 0, 0, 0, 0, 0, 0);".PHP_EOL;
+        $SQL.= "INSERT INTO pokemon (pokedex_id, pokemon_name, pokemon_form_name, pokemon_form_id, asset_suffix, min_cp, max_cp, min_weather_cp, max_weather_cp, weather, shiny) ";
+        $SQL.= "VALUES (". $QM . $pokemon_id . $QM . $SEP . $QM . $pokemon_name . $QM . $SEP . $QM . $form_name . $QM .", 0, 0, 0, 0, 0, 0, 0, 0);".PHP_EOL;
     }
 
     // Add delete command to SQL data.

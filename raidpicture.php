@@ -189,7 +189,7 @@ if($time_now < $raid['end_time']) {
         $pokemon_id = str_pad($raid['pokedex_id'], 3, '0', STR_PAD_LEFT);
 
         // Getting the actual icon
-        if($raid['shiny'] == 1) {
+        if($raid['shiny'] == 1 && !$config->RAID_PICTURE_DISABLE_SHINY) {
         	$img_pokemon = imagecreatefrompng(IMAGES_PATH . "/pokemon/pokemon_icon_" . $icon_suffix . "_shiny.png");    
         } else {
         	$img_pokemon = imagecreatefrompng(IMAGES_PATH . "/pokemon/pokemon_icon_" . $icon_suffix . ".png");

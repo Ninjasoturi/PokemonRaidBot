@@ -190,7 +190,7 @@ if($id == 0) {
             $dex_id = explode('-', $dex_id_form, 2)[0];
             $dex_form = explode('-', $dex_id_form, 2)[1];
             $pokemon_arg = $dex_id . (($dex_form != 'normal') ? ('-' . $dex_form) : '-0');
-            $local_pokemon = get_local_pokemon_name($dex_id_form);
+            $local_pokemon = get_local_pokemon_name($dex_id, $dex_form);
             debug_log('Got this pokemon dex id: ' . $dex_id);
             debug_log('Got this pokemon dex form: ' . $dex_form);
             debug_log('Got this local pokemon name and form: ' . $local_pokemon);
@@ -345,7 +345,7 @@ if($id == 0) {
             $dex_id = explode('-',$pid)[0];
 
             // Add pokemon with id and name.
-            $poke_name = get_local_pokemon_name($pid);
+            $poke_name = get_local_pokemon_name($dex_id,explode('-',$pid)[1]);
             $msg .= $poke_name . ' (#' . $dex_id . ')' . CR;
 
             // Add button to edit pokemon.

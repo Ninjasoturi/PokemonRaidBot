@@ -184,7 +184,9 @@ foreach ($update as $raid) {
         
     // TODO: Translate Form
     $form = 0;
-    if ( isset($raid['message']['form']) ) {}
+    if ( isset($raid['message']['form']) ) {
+        $form = $raid['message']['form'];
+    }
     $gender = 0;
     if ( isset($raid['message']['gender']) ) {
         
@@ -197,7 +199,6 @@ foreach ($update as $raid) {
        $move_1 = $raid['message']['move_1'];
        $move_2 = $raid['message']['move_2'];   
     }
-    $pokemon = $pokemon . '-normal';
     $start_timestamp = $raid['message']['start'];
     $end_timestamp = $raid['message']['end'];
     $start = gmdate("Y-m-d H:i:s",$start_timestamp);
@@ -230,6 +231,7 @@ foreach ($update as $raid) {
                 UPDATE raids
                 SET
                     pokemon = :pokemon,
+                    pokemon_form = :pokemon_form,
                     gym_team = :gym_team,
                     move1 = :move1,
                     move2 = :move2,
@@ -239,6 +241,7 @@ foreach ($update as $raid) {
             ';
             $statement = $dbh->prepare( $query );
             $statement->bindValue(':pokemon', $pokemon, PDO::PARAM_STR);
+            $statement->bindValue(':pokemon_form', $form, PDO::PARAM_STR);
             $statement->bindValue(':gym_team', $team, PDO::PARAM_STR);
             $statement->bindValue(':move1', $move_1, PDO::PARAM_STR);
             $statement->bindValue(':move2', $move_2, PDO::PARAM_STR);
@@ -284,11 +287,12 @@ foreach ($update as $raid) {
 
         $query = '
                 
-            INSERT INTO raids (pokemon, user_id, first_seen, start_time, end_time, gym_team, gym_id, move1, move2, gender)
-            VALUES (:pokemon, :user_id, :first_seen, :start_time, :end_time, :gym_team, :gym_id, :move1, :move2, :gender)
+            INSERT INTO raids (pokemon, pokemon_form, user_id, first_seen, start_time, end_time, gym_team, gym_id, move1, move2, gender)
+            VALUES (:pokemon, :pokemon_form, :user_id, :first_seen, :start_time, :end_time, :gym_team, :gym_id, :move1, :move2, :gender)
         ';
         $statement = $dbh->prepare( $query );
         $statement->bindValue(':pokemon', $pokemon, PDO::PARAM_STR);
+        $statement->bindValue(':pokemon_form', $form, PDO::PARAM_STR);
         $statement->bindValue(':user_id', $config->WEBHOOK_CREATOR, PDO::PARAM_STR);
         $statement->bindValue(':first_seen', gmdate("Y-m-d H:i:s"), PDO::PARAM_STR);
         $statement->bindValue(':start_time', $start, PDO::PARAM_STR);

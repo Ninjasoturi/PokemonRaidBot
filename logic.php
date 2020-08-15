@@ -224,7 +224,7 @@ function get_raid($raid_id)
         SELECT     raids.*,
                    gyms.lat, gyms.lon, gyms.address, gyms.gym_name, gyms.ex_gym, gyms.gym_note,
                    users.name,
-                   pokemon.pokemon_form_name,
+                   pokemon.pokemon_form_name, pokemon.pokedex_id
                    TIME_FORMAT(TIMEDIFF(end_time, UTC_TIMESTAMP()) + INTERVAL 1 MINUTE, '%k:%i') AS t_left,
                    TIMESTAMPDIFF(MINUTE,raids.start_time,raids.end_time) as t_duration
         FROM       raids
@@ -243,7 +243,7 @@ function get_raid($raid_id)
     $raid = $rs->fetch_assoc();
 
     // Inject raid level
-    $raid['level'] = get_raid_level($raid['pokemon'],$raid['pokemon_form_name']);
+    $raid['level'] = get_raid_level($raid['pokedex_id'],$raid['pokemon_form_name']);
 
     debug_log($raid);
 
@@ -3309,7 +3309,7 @@ function get_raid_times($raid, $override_language = true, $unformatted = false)
     // Raid times.
     if($unformatted == false) {
         if($config->RAID_POLL_POKEMON_NAME_FIRST_LINE == true) {
-            $msg .= get_local_pokemon_name($raid['pokemon'], $raid['pokemon_form_name'], $override_language) . ':' . SP;
+            $msg .= get_local_pokemon_name($raid['pokedex_id'], $raid['pokemon_form_name'], $override_language) . ':' . SP;
         } else {
             $msg .= $getTypeTranslation('raid') . ':' . SP;
         }
@@ -3396,10 +3396,10 @@ function show_raid_poll($raid)
     $msg = array();
 
     // Get current pokemon
-    $raid_pokemon_id = $raid['pokemon'];
+    $raid_pokemon_id = $raid['pokedex_id'];
     $raid_pokemon_form = $raid['pokemon_form_name'];
     // Get raid level
-    $raid_level = get_raid_level($raid['pokemon'],$raid['pokemon_form_name']);
+    $raid_level = get_raid_level($raid['pokedex_id'],$raid['pokemon_form_name']);
 
     // Get raid times.
     $msg = raid_poll_message($msg, get_raid_times($raid), true);
@@ -3453,10 +3453,10 @@ function show_raid_poll($raid)
     }
 
     // Display raid boss name.
-    $msg = raid_poll_message($msg, getPublicTranslation('raid_boss') . ': <b>' . get_local_pokemon_name($raid['pokemon'], $raid['pokemon_form_name'], true) . '</b>', true);
+    $msg = raid_poll_message($msg, getPublicTranslation('raid_boss') . ': <b>' . get_local_pokemon_name($raid['pokedex_id'], $raid['pokemon_form_name'], true) . '</b>', true);
 
     // Display raid boss weather.
-    $pokemon_weather = get_pokemon_weather($raid['pokemon'], $raid['pokemon_form_name']);
+    $pokemon_weather = get_pokemon_weather($raid['pokedex_id'], $raid['pokemon_form_name']);
     $msg = raid_poll_message($msg, ($pokemon_weather != 0) ? (' ' . get_weather_icons($pokemon_weather)) : '', true);
     $msg = raid_poll_message($msg, CR, true);
 
@@ -3537,7 +3537,7 @@ function show_raid_poll($raid)
     // Raid has started and has participants
     if($time_now > $raid['start_time'] && $cnt_all > 0) {
         // Display raid boss CP values.
-        $pokemon_cp = get_formatted_pokemon_cp($raid['pokemon'], true);
+        $pokemon_cp = get_formatted_pokemon_cp($raid['pokedex_id'],$raid['pokemon_form_name'], true);
         $msg = raid_poll_message($msg, (!empty($pokemon_cp)) ? ($pokemon_cp . CR) : '', true);
 
         // Add raid is done message.
@@ -3551,7 +3551,7 @@ function show_raid_poll($raid)
     // Buttons are hidden?
     } else if($buttons_hidden) {
         // Display raid boss CP values.
-        $pokemon_cp = get_formatted_pokemon_cp($raid['pokemon'], true);
+        $pokemon_cp = get_formatted_pokemon_cp($raid['pokedex_id'],$raid['pokemon_form_name'], true);
         $msg = raid_poll_message($msg, (!empty($pokemon_cp)) ? ($pokemon_cp . CR) : '', true);
     }
 
@@ -3917,7 +3917,7 @@ function show_raid_poll_small($raid, $override_language = false)
 
     // Pokemon
     if(!empty($raid['pokemon'])) {
-        $msg .= '<b>' . get_local_pokemon_name($raid['pokemon'],$raid['pokemon_form_name']) . '</b> ' . CR;
+        $msg .= '<b>' . get_local_pokemon_name($raid['pokedex_id'],$raid['pokemon_form_name']) . '</b> ' . CR;
     }
     // Start time and end time
     if(!empty($raid['start_time']) && !empty($raid['end_time'])) {

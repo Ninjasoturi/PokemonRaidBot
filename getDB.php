@@ -171,7 +171,7 @@ if(!empty($pokemon_array)) {
             
             $poke_shiny = $data['shiny'];
             
-            if($pokemon_id == 150 && $data['pokemon_form_name']=="A") {
+            if($pokemon_id == 150 && $data['pokemon_form_name']=="a") {
                 // Because logic and consistency
                 $poke_form = "armored";
             }else {

@@ -28,7 +28,7 @@ $now = utcnow();
 $today = dt2date($now);
 $start = dt2time($raid['start_time']);
 $end = dt2time($raid['end_time']);
-$msg .= get_local_pokemon_name($raid['pokemon'],$raid['pokemon_form_name']) . SP . '-' . SP . (($raid_day == $today) ? '' : ($raid_day . ', ')) . $start . SP . getTranslation('to') . SP . $end . CR . CR;
+$msg .= get_local_pokemon_name($raid['pokemon'],$raid['pokemon_form']) . SP . '-' . SP . (($raid_day == $today) ? '' : ($raid_day . ', ')) . $start . SP . getTranslation('to') . SP . $end . CR . CR;
 
 // Public or private raid group?
 if($arg == 'public-unconfirmed' || $arg == 'public-send') {

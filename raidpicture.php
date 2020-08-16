@@ -382,7 +382,7 @@ for($ya=0;$ya<$num_text_lines;$ya++){
 
 
 // Pokemon raid boss
-$pokemon_name = get_local_pokemon_name($raid['pokemon'], true);
+$pokemon_name = get_local_pokemon_name($raid['pokedex_id'],$raid['pokemon_form_id'], true);
 
 // Pokemon name and form?
 $pokemon_text_lines = array($pokemon_name);

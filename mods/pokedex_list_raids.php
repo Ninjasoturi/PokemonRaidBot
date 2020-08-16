@@ -12,7 +12,7 @@ bot_access_check($update, 'pokedex');
 // Get all pokemon with raid levels from database.
 $rs = my_query(
         "
-        SELECT    pokedex_id, pokemon_form_name, raid_level
+        SELECT    pokedex_id, pokemon_form_id, raid_level
         FROM      pokemon
         WHERE     raid_level != '0'
         ORDER BY  raid_level, pokedex_id, pokemon_form != 'normal', pokemon_form
@@ -41,13 +41,13 @@ while ($pokemon = $rs->fetch_assoc()) {
         $msg .= '<b>' . getTranslation($pokemon['raid_level'] . 'stars') . ':</b>' . CR ;
     }
     // Add pokemon with id and name.
-    $poke_name = get_local_pokemon_name($pokemon['pokedex_id'],$pokemon['pokemon_form_name']);
+    $poke_name = get_local_pokemon_name($pokemon['pokedex_id'],$pokemon['pokemon_form_id']);
     $msg .= $poke_name . ' (#' . $pokemon['pokedex_id'] . ')' . CR;
 
     // Add button to edit pokemon.
     $keys[] = array(
         'text'          => '[' . $pokemon['raid_level'] . ']' . SP . $poke_name,
-        'callback_data' => $pokemon['pokedex_id'] . ':pokedex_edit_pokemon:0'
+        'callback_data' => $pokemon['pokedex_id'] . '-' . $pokemon['pokemon_form_id'] . ':pokedex_edit_pokemon:0'
     );
 
     // Prepare next run.

@@ -7,7 +7,8 @@ debug_log('START()');
 //debug_log($data);
 
 $new_user = new_user($update['message']['from']['id']);
-if($config->TUTORIAL_MODE && $new_user) {
+$access = bot_access_check($update, 'create', true, false, $new_user);
+if($config->TUTORIAL_MODE && !$access) {
 	$msg = $tutorial[0]['msg_new'];
 	$keys = [
 	[

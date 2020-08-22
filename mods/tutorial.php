@@ -5,20 +5,25 @@ $new_user = new_user($user_id);
 $end = false;
 $tutorial_count = count($tutorial)-1;
 
-
 if($action == "end") {
 	if($new_user) {
 		my_query("UPDATE users SET tutorial = '1' WHERE user_id = '{$user_id}'");
-		
+
         foreach($config->RESTRICTED_CHAT_ID as $chat_id) {
             // Create content array.
             $content = [
                 'method'     => 'restrictChatMember',
                 'chat_id'    => $chat_id,
                 'user_id'	 => $user_id,
-                'can_send_messages'       => 1,
-                'can_send_media_messages'       => 1,
-                'can_send_other_messages'       => 1
+                'can_send_messages'             => $config->RESTRICIONS_AFTER_TUTORIAL[0],
+                'can_send_media_messages'       => $config->RESTRICIONS_AFTER_TUTORIAL[1],
+                'can_send_polls'                => $config->RESTRICIONS_AFTER_TUTORIAL[2],
+                'can_send_other_messages'       => $config->RESTRICIONS_AFTER_TUTORIAL[3],
+                'can_add_web_page_previews'     => $config->RESTRICIONS_AFTER_TUTORIAL[4],
+                'can_change_info'               => $config->RESTRICIONS_AFTER_TUTORIAL[5],
+                'can_invite_users'              => $config->RESTRICIONS_AFTER_TUTORIAL[6],
+                'can_pin_messages'              => $config->RESTRICIONS_AFTER_TUTORIAL[7]
+                
             ];
 
             // Encode data to json.

@@ -4264,7 +4264,7 @@ function sendalarm($text, $raid, $user)
 }
 
 /**
- * Check if the user is new to the channel
+ * Check if the user is new to the channel/group
  * @param $user_id
  * @return bool
  */

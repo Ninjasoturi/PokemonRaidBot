@@ -133,7 +133,7 @@ while($res_messages = $query_messages->fetch_assoc()) {
 	}
 }
 foreach($config->CHAT_CLEANUP_ID as $cleanup_chat_id) {
-    #chat_cleanup($cleanup_chat_id);
+    chat_cleanup($cleanup_chat_id);
 }
 
 // Write to log.

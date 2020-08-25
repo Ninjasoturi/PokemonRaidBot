@@ -307,7 +307,7 @@ if($id == 0) {
             SELECT    pokedex_id, pokemon_form_name, pokemon_form_id, raid_level
             FROM      pokemon
             WHERE     raid_level IN ({$clear})
-            ORDER BY  raid_level, pokedex_id, pokemon_form_name != 'normal', pokemon_form_name
+            ORDER BY  raid_level, pokedex_id, pokemon_form_name != 'normal', pokemon_form_name, pokemon_form_id
             "
         );
 

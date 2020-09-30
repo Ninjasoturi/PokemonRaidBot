@@ -73,7 +73,7 @@ function active_raid_duplication_check($gym_id)
         FROM   raids
         WHERE  end_time > (UTC_TIMESTAMP() - INTERVAL 10 MINUTE)
         AND    gym_id = {$gym_id}
-                {$query_add}
+                
         GROUP BY id
         "
     );
@@ -4269,9 +4269,18 @@ function sendalarm($text, $raid, $user)
  * @return bool
  */
 function new_user($user_id) {
+    global  $dbh;
 	debug_log("Checking for new users: ".$user_id);
-	$query = my_query("SELECT tutorial FROM users WHERE user_id = '{$user_id}'");
-	$res = $query->fetch_assoc();
+    try {
+        $query = "SELECT tutorial FROM users WHERE user_id = :user_id";
+        $statement = $dbh->prepare( $query );
+        $statement->execute([":user_id"=>$user_id]);
+    } catch (PDOException $exception) {
+        error_log($exception->getMessage());
+        $dbh = null;
+        exit;
+    }
+	$res = $statement->fetch;
 	debug_log("Result: ".$res['tutorial']);
 	$return = (($res['tutorial']==0)?true:false);
 	return $return;

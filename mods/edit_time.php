@@ -110,8 +110,7 @@ if ($raid_id == 0 && $gym_id != 0) {
 			  start_time = '{$start_date_time}',
                           end_time = DATE_ADD(start_time, INTERVAL {$duration} MINUTE),
 			  gym_id = '{$gym_id}',
-              event = {$event},
-              raid_level = '{$raid_level}'
+              event = {$event}
             "
         );
 
